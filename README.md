@@ -1,6 +1,6 @@
-# UNBOX Robotics Assignment 1 : GPIO_drv
+# UNBOX Robotics Assignment 2 : UART_drv
 
-This branch of the repository contains the code and the documentation for the GPIO driver assignment. PlatformIO cli with nvim was used for development. PlatformIO is used as it provides a convenient way to manage, build and debug the project, but no platformio-specific api is used within the code. The code was tested on the Wokwi simulator.
+This branch of the repository contains the code and the documentation for the UART driver assignment. PlatformIO cli with nvim was used for development. PlatformIO is used as it provides a convenient way to manage, build and debug the project, but no platformio-specific api is used within the code. The code was tested on the Wokwi simulator.
 
 ## Code Organization
 
@@ -9,9 +9,9 @@ The code organization is as follows:
 ```plaintext
 .
 ├── lib
-│   └── GPIO_drv
-│       ├── GPIO_drv.c
-│       └── GPIO_drv.h
+│   └── UART_drv
+│       ├── UART_drv.c
+│       └── UART_drv.h
 ├── platformio.ini
 ├── README.md
 └── src
@@ -21,48 +21,30 @@ The code organization is as follows:
 The driver header is placed in the `lib/` folder for organization purposes, and the main application code is in the `src/` folder. Below is the public API that the header provides:
 
 ```c
-void GPIO_setPinDirection(uint8_t pin, uint8_t direction);
-void GPIO_writePin(uint8_t pin, uint8_t value);
-void GPIO_togglePin(uint8_t pin);
-uint8_t GPIO_readPin(uint8_t pin);
+void UART_init(uint32_t baudRate);
+
+uint8_t UART_availableCount(void);
+uint8_t UART_availableBool(void);
+
+void UART_transmitByte(uint8_t data);
+void UART_transmitString(const char* text);
+
+uint8_t UART_receiveByte(void);
 ```
 
 These functions have function level comments for LSP level help.
 
 ## API Algorithm Overview
 
-All of the given functions follow a similar algorithmic structure of setting register values based on the pin number.
-Arduino Schematic was used to determine the corresponding registers for each pin. The functions use bit manipulation to set, clear, or toggle the appropriate bits in the registers to achieve the desired functionality.
+UART on Atmega328P is implemented using the USART registers. Each function implements exactly what its name suggests. Implementation level details are documented in the code itself through function level comments.
 
-### Hardware Mapping and Pin Section
+## Important Notes
 
-Arduino UNO maps the pins to the ports in below manner. Each port is an 8 bit register.
+- The `UART_init()` function must be called before any other UART functions to initialize the USART registers with the correct baud rate. It does not enable global interrupts itself, it is to be done in the application code by the user.
+- `UART_receiveByte()` returns 0 when the buffer is empty. Always call `UART_availableBool()` before calling `UART_receiveByte()` to avoid ambiguity with a valid `0x00` byte.
+- The RX circular buffer is 64 bytes. Bytes received beyond this capacity are silently dropped. Ensure the application reads from the buffer frequently enough to avoid overflow.
 
-```plaintext
-pin 0-7 -> PORTD, bits 0-7
-pin 8-13 -> PORTB, bits 0-5
-```
-
-### Known Limitations / Assumptions
-
-The `GPIO_readPin()` function returns 0 if the pin number is out of range, which may not be ideal in all cases. It would be better to return an error code or use a different mechanism to indicate an invalid pin number. Since this is a standalone API, it is assumed that the user will handle such cases in their code.
-
-### API Interrupt Safety
-
-The api is made interrupt-safe by below snippet where read-modify-write operations are performed:
-
-```c
-{
-    uint8_t oldSREG = SREG; // Save the current state of the global interrupt flag
-    cli(); // disable interrupts to ensure atomic operation while modifying registers
-
-    // Register manipulation code goes here
-
-    SREG = oldSREG; // Restore the previous state of the global interrupt flag
-}
-```
-
-## Build and Flash Intructions
+## Build and Flash Instructions
 
 PlatformIO cli can be used to build and flash the code to the Arduino UNO. Below are the commands:
 

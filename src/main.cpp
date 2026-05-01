@@ -1,16 +1,19 @@
-#include "../lib/GPIO_drv/GPIO_drv.h"
+#include "../lib/UART_drv/UART_drv.h"
 #include <Arduino.h>
+#include <avr/interrupt.h>
 #include <util/delay.h>
 
 void setup()
 {
-    // Set pin 13 as OUTPUT
-    GPIO_setPinDirection(13, GPIO_OUTPUT);
+    UART_init(9600); // Initialize UART with a baud rate of 9600
+    sei(); // enable global interrupts
+    UART_transmitString("Hello, UART!\n"); // Transmit a test string over UART
 }
 
 void loop()
 {
-    // Toggle pin 13 every second
-    GPIO_togglePin(13);
-    _delay_ms(500); // Delay for 0.5 second as given in the requirements
+    if (UART_availableBool()) { // Check if data is available in the UART receive buffer
+        uint8_t receivedByte = UART_receiveByte(); // Read a byte from the UART receive buffer
+        UART_transmitByte(receivedByte); // Echo the received byte back over UART
+    }
 }
